@@ -1,5 +1,5 @@
 # SheetSync
-Sync google spreadhseet fields to an HTML template
+Sync google spreadsheet fields to an HTML template
 
 ## What does this do?
 This is primarily a javascript class to sync google spreadsheet information to specific elements within an HTML template.  The original implementation was created to easily manage Twitch.tv score overlays for fighting game tournaments for the [FightRise community](https://fightrise.com).
@@ -51,7 +51,7 @@ Once you have setup everything above open up the demo/scoreboard_localhost.html 
 
 Once your template is setup, and when you're streaming all you really should be doing is tweaking values in Column B and after you click off the cell (which saves the data), your web page should be updated with the data after approximately 1 second.  The update interval can be updated more quickly (or slowly), based on some settings values, but it is kept to this to be reasonably snappy and also not hit any google spreadsheet API rate limits.
 
-## Format of the Google Spreadhseet 
+## Format of the Google Spreadsheet 
 The spreadsheet is setup where the first row is just setup as a header for labeling columns and the columns are setup in the following manner:
 - HTML element ID (don't mess with unless you know what you're doing)
 - Value used to pass to the template for the corresponding HTML element
