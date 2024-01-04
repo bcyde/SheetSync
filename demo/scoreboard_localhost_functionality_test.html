@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Kdam+Thmor+Pro&family=Montserrat&display=swap" rel="stylesheet"> 
+		<style>
+			:root{
+				--ss-background-color: #ffffff;
+				--ss-font-color-normal: #ffffff;
+				--ss-font-family: 'Montserrat', sans-serif;
+				--ss-font-size-normal: 1.8rem;
+				--ss-font-size-score: 2.4rem;				
+				--ss-name-wrapper-position-offset: 332px;
+				--ss-player-flag-offset: 247px;
+				--ss-scoreboard-content-width: 540px;
+				--ss-scoreboard-name-width: 392px;
+				--ss-scoreboard-content-border: solid 3px #55a717;
+				--ss-scoreboard-content-border-radius: 10px;
+				--ss-scoreboard-content-box-shadow: 0 0 8px #55a717;
+				--ss-scoreboard-control-type-horizontal-offset: -15px;
+				--ss-scoreboard-content-background-color: rgb(8,22,25);
+				--ss-scoreboard-content-background-gradient: radial-gradient(circle, rgba(8,22,25,1) 22%, rgba(15,47,62,1) 58%, rgba(32,60,66,1) 89%);
+			}
+
+			html {
+				font-size: 62.5% !important; /* for easier rem calculations*/
+				overflow: hidden;
+			}
+
+			body {
+				color: var(--ss-font-color-normal);
+				font-size: var(--ss-font-size-normal);
+				font-family: var(--ss-font-family);
+				background: var(--ss-background-color);
+				margin: 0;
+			}			
+
+			.scoreboard {				
+				display: flex;
+				flex-direction: row;
+				justify-content: space-between;
+				margin: 29px auto 0;
+				width: 1520px;
+			}			
+
+			.scoreboard__content {
+				background: var(--ss-scoreboard-content-background-color);
+				background: var(--ss-scoreboard-content-background-gradient);
+				border: var(--ss-scoreboard-content-border);
+				border-radius: var(--ss-scoreboard-content-border-radius);
+				box-shadow: var(--ss-scoreboard-content-box-shadow);
+				display: flex;
+				position: relative;
+				width: var(--ss-scoreboard-content-width);
+			}
+						
+			.scoreboard__content--left {				
+				flex-direction: row-reverse;												
+			}
+
+			.scoreboard__content--right {				
+				flex-direction: row;								
+			}
+			
+			.scoreboard__name-wrapper {
+				align-items: center;
+				display: flex;				
+				height: auto;								
+				justify-content: center;								
+				transform: none;				
+				width: var(--ss-scoreboard-name-width);
+			}
+
+			.scoreboard__name-wrapper--player1 {
+				left: var(--ss-name-wrapper-position-offset);
+			}
+			
+			.scoreboard__name-wrapper--player2 {
+				right: var(--ss-name-wrapper-position-offset);
+			}
+
+			.flag {								
+				background-position: center center;
+				background-repeat: no-repeat;
+				background-size: contain;				
+				content: '';				
+				display: block;				
+				height: 34px;				
+				width: 46px;
+			}
+
+			#player1-flag {
+				left: var(--ss-player-flag-offset);
+			}
+
+			#player2-flag {
+				right: var(--ss-player-flag-offset);
+			}
+			
+			.scoreboard__score {
+				align-items: center;
+				display: flex;
+				font-size: var(--ss-font-size-score);
+				justify-content: center;
+				width: 45px;
+			}
+
+			.scoreboard__control-type {
+				background-position: center center;
+				background-size: contain;
+				background-repeat: no-repeat;
+				content: '';				
+				display: block;
+				position: absolute;
+				height: 46px;
+				top: -6px;
+				width: 46px;				
+			}
+
+			#player1-scoreboard-control-type {
+				left: var(--ss-scoreboard-control-type-horizontal-offset);
+			}
+			
+			#player2-scoreboard-control-type {
+				right: var(--ss-scoreboard-control-type-horizontal-offset);
+			}
+		</style>		
+		<script>
+			class SheetSync {
+				#apiUrl = null;
+				#syncInterval = null;
+				#settings = {
+					syncTiming: 1000, //default update every second, which should fall in well below google sheets API rate limits if only a few copies of the page are open per account
+					callbacks: {}
+				};    
+				
+				constructor(options) {					
+					if (typeof options == 'object') {						
+						this.#settings = {...this.#settings, ...options};
+					}
+
+					if (this.#settings.hasOwnProperty('apiKey') && this.#settings.hasOwnProperty('spreadsheetId')) {
+						this.#apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${this.#settings.spreadsheetId}/values/Sheet1?key=${this.#settings.apiKey}`;
+					}
+				}    
+
+				fetchData() {
+					if (this.#apiUrl) {
+						fetch(this.#apiUrl)
+						.then(response => response.json())
+						.then(data => {
+							console.log(data);
+							// Process the data
+							const values = data.values;
+							if (values && values.length) {
+								/**
+								 * columns of data should be:
+								 * 0: <string> HTML element id to match
+								 * 1: <string> value to be synced
+								 * 2: rules to process value (default will be to just replace innerText of element)
+								 * anything columns are ignored and can be used for instructional purposes
+								 */                    
+								for (let i = 1; i < values.length; i++) { //start at 1 since 0 is our header row			
+									if (values[i][0] && values[i][0].length) {
+										const id = values[i][0];
+										const syncValue = values[i][1];
+										const element = document.getElementById(id);                            
+										if (element) {
+											if (values[i][2] && values[i][2].length) {
+												try {													
+													const processCommand = JSON.parse(values[i][2]);
+													if (processCommand && processCommand.hasOwnProperty('action') ) {														
+														switch(processCommand.action) {
+															case 'background-image': //set background image																																
+																element.style['background-image'] = 'url(' + syncValue + ')';																
+																break;
+															case 'className': //replaces the entire classname
+																element.className = syncValue; 
+																break;
+															case 'classMap': //sets class based on map, but does not clear out any exisitng classes on the element (unless it was part of the map)																
+																if (processCommand.hasOwnProperty('value') ) {																	
+																	const classMap = JSON.parse(processCommand.value);
+																	//first clear our old values
+																	element.classList.remove(...classMap.values);
+																	//check if we have a valid value and if so, set it
+																	const selectedOptionIndex = classMap.options.indexOf(syncValue);
+																	if (selectedOptionIndex !== -1) {
+																		element.classList.add(classMap.values[selectedOptionIndex]);
+																	}
+																}    
+																break;
+															case 'attribute': //use for data attributes or src, etc
+																if (processCommand.hasOwnProperty('value') ) {
+																	element.setAttribute(processCommand.value, syncValue);
+																}                                                    
+																break;
+															case 'style':																
+																if (processCommand.hasOwnProperty('value') ) {																	
+																	element.style[processCommand.value] = syncValue;
+																}
+																break;
+															case 'callback':																
+																if (processCommand.hasOwnProperty('value') ) {
+																	if (this.#settings.callbacks.hasOwnProperty(processCommand.value) && typeof this.#settings.callbacks[processCommand.value] === 'function') {
+																		this.#settings.callbacks[processCommand.value](element, syncValue, processCommand);
+																	}
+																}                                                    
+																break;
+															case 'text': //default just set innertext
+															default: 
+																element.innerText = syncValue;
+																break;
+														}
+													}
+												} catch (exception) {
+													console.log('Error occurred while attempting to sync element at row: ' + i + ' ' + exception);
+												}                                    
+											} else {
+												element.innerText = syncValue;
+											}
+										}
+									}							
+								}
+							}
+							
+						})
+						.catch(error => {
+							console.error('Error fetching data:', error);
+						});	
+					} else {
+						console.log('Error no apiUrl not initialized, make sure apiKey and spreadsheetId were included in constructor.')
+					}        
+				}
+
+				sync() {
+					//make sure we aren't already syncing and have an interval set
+					if (!this.#syncInterval) {
+						this.fetchData();
+						this.#syncInterval = setInterval(this.fetchData.bind(this), this.#settings.syncTiming);
+					}
+				}
+
+				stopSync() {
+					if (this.#syncInterval) {
+						clearInterval(this.#syncInterval);
+						this.#syncInterval = null;
+					}
+				}
+
+				registerCallback(callback) {					
+					let callbackRegistered = false;
+					if (typeof callback == 'function') {
+						this.#settings.callbacks[callback.name] = callback;						
+					}
+				}
+			}
+
+			const testCallback = (element, syncValue, processCommand) => {
+				console.log('in test callback');
+				console.log(element);
+				console.log(syncValue);
+				console.log(processCommand);
+			}
+
+			const sheetSyncSettings = {
+				apiKey: '', //<REQUIRED USER INPUT> ENTER YOUR GOOGLE SHEETS API KEY
+				spreadsheetId: '' //<REQUIRED USER INPUT> ENTER THE SPREADSHEET ID FOR YOUR GOOGLE SHEET
+			}
+			const sheetSync = new SheetSync(sheetSyncSettings);
+			sheetSync.registerCallback(testCallback);
+			sheetSync.sync();			
+		</script>
+	</head>
+	<body>
+		<div class="scoreboard">
+			<!-- Player One -->
+			<div class='scoreboard__content scoreboard__content--left'>							
+				<div class="scoreboard__score" id='player1-score'>0</div>
+				<!-- Player Name Box -->
+				<div class="scoreboard__name-wrapper scoreboard__name-wrapper--player1">
+					<!-- Player -->
+					<span id='player1'>Player One</span> 				
+				</div>
+				<!-- Player Flag -->
+				<div class="flag" id="player1-flag"></div>
+				<!-- Player Control Type -->
+				<div class="scoreboard__control-type" id="player1-scoreboard-control-type"></div>
+			</div>
+			
+			<!-- Player Two -->
+			<div class='scoreboard__content scoreboard__content--right'>			
+				<!-- Player Score -->
+				<div class="scoreboard__score" id='player2-score'>0</div>
+				<!-- Player Name Box -->
+				<div class='scoreboard__name-wrapper scoreboard__name-wrapper--player2'>
+					<!-- Player -->
+					<span id='player2'>Player Two</span>
+				</div>								
+				<!-- Player Flag -->
+				<div class="flag" id="player2-flag"></div>
+				<!-- Player Control Type -->
+				<div class="scoreboard__control-type" id="player2-scoreboard-control-type"></div>
+			</div>
+		</div>
+		<div class="test-block">
+			<div id="attribute-tester"></div>
+			<div id="callback-tester"></div>
+			<div id="classname-tester"></div>
+			<div id="classmap-tester"></div>
+			<div id="style-tester"></div>
+		</div>
+	</body>
+</html>
